@@ -1,0 +1,17 @@
+{% extends "layout.html" %} {% block title %} The Official Potato Book Reviews
+{% endblock %} {% block body %}
+
+<div class="container">
+  <div class="row">
+    <div class="col text-center">
+      <h1>Potato Book Reviews</h1>
+      <br />
+      <br />
+      <form action="{{ url_for('main') }}" method="POST">
+        <button>enter</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

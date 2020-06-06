@@ -1,0 +1,35 @@
+{% extends "layout.html" %} {% block title %} Potato Reviews {% endblock %} {%
+block body %}
+
+<div class="container">
+  <div class="row">
+    <div class="col text-center">
+      <h1>Welcome to Potato Book Reviews</h1>
+    </div>
+  </div>
+
+  <br />
+
+  <div class="row">
+    <div class="col">
+      <form
+        class="d-flex justify-content-center"
+        action="{{ url_for('reviews') }}"
+        method="POST"
+      >
+        <button>reviews</button>
+      </form>
+      <br />
+      <br />
+      <form
+        class="d-flex justify-content-center"
+        action="{{ url_for('form') }}"
+        method="POST"
+      >
+        <button>review a book</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

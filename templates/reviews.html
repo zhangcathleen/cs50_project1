@@ -1,0 +1,29 @@
+{% extends "layout.html" %} {% block title %} Potato Reviews {% endblock %} {%
+block body %}
+
+<div class="container">
+  <div class="row">
+    <div class="col text-center">
+      <h1>Here are the Reviews</h1>
+    </div>
+  </div>
+
+  <br />
+  <div class="row">
+    <div class="col text-center">
+      <div>
+        <h2>Here are all the books in the database</h2>
+
+        <ul>
+          {% for book in books %}
+          <li>
+            {{ book.title }} by {{ book.author }}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
