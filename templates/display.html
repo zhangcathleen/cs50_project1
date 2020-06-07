@@ -12,12 +12,21 @@ block body %}
   <div class="row">
     <div class="col text-center">
       <div>
-        <h2>Here are all the books in the database</h2>
+        <h2>Here are all the reviews in the database</h2>
+      </div>
 
+      <div>
+        <h2>Search for a book on the website</h2>
+
+        <form class="d-flex justify-content-center" method="POST">
+          <input name="isbn_number" placeholder="ISBN Number" />
+          <button>search isbn</button>
+        </form>
+        
         <ul>
           {% for book in books %}
           <li>
-            {{ book.title }} by {{ book.author }}
+            {{ book.isbn }} : {{ book.title }} by {{ book.author }}
           </li>
           {% endfor %}
         </ul>

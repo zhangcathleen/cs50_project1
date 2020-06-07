@@ -27,4 +27,5 @@ class Review(db.Model):
     link = db.Column(db.String, db.ForeignKey("books.isbn"), nullable=False)
     ratings_gr = db.Column(db.Float, nullable=False)
     ratings_web = db.Column(db.Float)
-    user = db.Column(db.Integer, db.ForeignKey("potatos.id"), nullable=False)
+    potato = db.Column(db.Integer, db.ForeignKey("potatos.id"), nullable=False)
+    note = db.Column(db.String)

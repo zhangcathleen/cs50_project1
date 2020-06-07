@@ -27,13 +27,14 @@ class Book:
 
 
 class Review:
-    def __init__(self, id, link, ratings_gr, ratings_web, user):
+    def __init__(self, id, link, ratings_gr, ratings_web, user), note:
         self.id = id
 
         self.link = link
         self.ratings_gr = ratings_gr
         self.ratings_web = ratings_web
         self.user = user
+        self.note = note
 
     def __repr__(self):
         return self.id

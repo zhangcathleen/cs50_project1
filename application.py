@@ -1,6 +1,7 @@
 import os
 from flask import Flask, session, render_template, jsonify, request
 from models import *
+from goodreads import *
 from flask_session import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -9,6 +10,8 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 # Check for environment variable
 if not os.getenv("DATABASE_URL"):
     raise RuntimeError("DATABASE_URL is not set")
+
+DEBUG = True
 
 # Configure session to use filesystem
 app = Flask(__name__)
@@ -34,12 +37,33 @@ def main():
     return render_template("main.html")
 
 
-@app.route("/reviews", methods=["POST"])
-def reviews():
+@app.route("/display", methods=['GET', "POST"])
+def display():
+    if request.method == "POST":
+        isbn = request.form.get("isbn_number")
+        review = GoodRead(isbn)
+        if review is None:
+            return render_template("error.html", message="No book with this isbn")
+
+        result = review.print_json
+        return render_template("book.html", result=result)
+
     # List all the books on the site
     reviews = Review.query.all()
     books = Book.query.all()
-    return render_template("reviews.html",  books=books, reviews=review)
+    return render_template("display.html", books=books)
+
+
+@app.route("/book/<int:review_id>")
+def review(review_id):
+
+    isbn = request.form.get("isbn_number")
+    review = GoodRead.query.get(isbn)
+    if review is None:
+        return render_template("error.html", message="No book with this name")
+
+    result = review.res
+    return render_template("review.html", result=result)
 
 
 @app.route("/form", methods=["POST"])

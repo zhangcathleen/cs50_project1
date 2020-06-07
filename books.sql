@@ -16,7 +16,9 @@ CREATE TABLE reviews (
     link VARCHAR NOT NULL REFERENCES books(isbn), -- the isbn
     ratings_gr FLOAT NOT NULL,
     ratings_web FLOAT,
-    user INTEGER NOT NULL REFERENCES potatos (id),
+    potato INTEGER NOT NULL REFERENCES potatos(id),
+    note TEXT
+
 );
 
 ALTER TABLE reviews DROP COLUMN book;
