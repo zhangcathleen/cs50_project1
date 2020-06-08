@@ -1,0 +1,28 @@
+{% extends "layout.html" %} {% block title %} Potato Reviews - {{ info.isbn }}
+{% endblock %} {% block body %}
+
+<div class="container">
+  <div class="row">
+    <div class="col text-center">
+      <h1>Here is the Book Info + Future Reviews</h1>
+    </div>
+  </div>
+
+  <br />
+  <div class="row">
+    <div class="col text-center">
+      <div>
+        <h2>Book Info</h2>
+        <ul>
+          <li>Book Title: {{ info.title }}</li>
+          <li>ISBN Number: {{ info.isbn }}</li>
+          <li>Book Author: {{ info.author }}</li>
+          <li>Year Published: {{ info.year }}</li>
+          <li>Average Rating: {{ info.average_rating }}</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

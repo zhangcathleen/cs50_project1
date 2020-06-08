@@ -40,13 +40,9 @@ def main():
 @app.route("/display", methods=['GET', "POST"])
 def display():
     if request.method == "POST":
-        isbn = request.form.get("isbn_number")
-        review = GoodRead(isbn)
         if review is None:
             return render_template("error.html", message="No book with this isbn")
-
-        result = review.print_json
-        return render_template("book.html", result=result)
+        return redirect(url_for("book"))
 
     # List all the books on the site
     reviews = Review.query.all()
@@ -54,16 +50,36 @@ def display():
     return render_template("display.html", books=books)
 
 
-@app.route("/book/<int:review_id>")
-def review(review_id):
+@app.route("/book", methods=["POST"])
+def book():
 
-    isbn = request.form.get("isbn_number")
-    review = GoodRead.query.get(isbn)
-    if review is None:
-        return render_template("error.html", message="No book with this name")
+    isbn = request.form["isbn_number"]
+    res = requests.get("https://www.goodreads.com/book/review_counts.json",
+                       params={"key": "yGgwZLPLZpqS8IAGXcPA", "isbns": isbn})
+    try:
+        json = res.json()
+    except:
+        return render_template("error.html", message="No book with this name on gr", isbn=isbn)
 
-    result = review.res
-    return render_template("review.html", result=result)
+    try:
+        book_table = Book.query.get(isbn)
+    except:
+        return render_template("error.html", message="No book with this name on table", isbn=isbn)
+
+    info = {}
+    info[isbn] = isbn
+    json = res.json()
+    json_info = json['books'][0]
+    info['isbn'] = isbn
+    info['isbn13'] = json_info['isbn13']
+    info['ratings_count'] = json_info['ratings_count']
+    info['average_rating'] = json_info['average_rating']
+    info['title'] = book_table.title
+    info['author'] = book_table.author
+    info['year'] = book_table.year
+
+    print(info)
+    return render_template("book.html", info=info)
 
 
 @app.route("/form", methods=["POST"])

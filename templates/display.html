@@ -18,11 +18,11 @@ block body %}
       <div>
         <h2>Search for a book on the website</h2>
 
-        <form class="d-flex justify-content-center" method="POST">
+        <form class="d-flex justify-content-center" action="book" method="POST">
           <input name="isbn_number" placeholder="ISBN Number" />
           <button>search isbn</button>
         </form>
-        
+
         <ul>
           {% for book in books %}
           <li>

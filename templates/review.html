@@ -1,5 +1,5 @@
-{% extends "layout.html" %} {% block title %} Potato Reviews - {{result.isbn}}
-{% endblock %} {% block body %}
+{% extends "layout.html" %} {% block title %} Potato Reviews - {% endblock %} {%
+block body %}
 
 <div class="container">
   <div class="row">
@@ -14,12 +14,12 @@
       <div>
         <h2>Here are all the reviews in the database</h2>
         <ul>
-          {% for review in reviews %}
+          <!-- {% for review in reviews %}
           <br />
           <li>
             {{review.link}}
           </li>
-          {% endfor %}
+          {% endfor %} -->
         </ul>
       </div>
     </div>
