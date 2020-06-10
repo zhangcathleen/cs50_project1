@@ -4,7 +4,7 @@ block body %}
 <div class="container">
   <div class="row">
     <div class="col text-center">
-      <h1>Here are the Reviews</h1>
+      <h1>Browse all the Books</h1>
     </div>
   </div>
 
@@ -12,12 +12,10 @@ block body %}
   <div class="row">
     <div class="col text-center">
       <div>
-        <h2>Here are all the reviews in the database</h2>
+        <h2>Browse all the Books</h2>
       </div>
 
       <div>
-        <h2>Search for a book on the website</h2>
-
         <form class="d-flex justify-content-center" action="book" method="POST">
           <input name="isbn_number" placeholder="ISBN Number" />
           <button>search isbn</button>
@@ -26,7 +24,10 @@ block body %}
         <ul>
           {% for book in books %}
           <li>
-            {{ book.isbn }} : {{ book.title }} by {{ book.author }}
+            {{ book.isbn }} :
+            <a href="{{ url_for('books', isbn=book.isbn) }}"
+              >{{ book.title }} by {{ book.author }}
+            </a>
           </li>
           {% endfor %}
         </ul>
