@@ -41,7 +41,7 @@ def main():
     return render_template("main.html")
 
 
-@app.route("/display", methods=["POST"])
+@app.route("/display", methods=["GET", "POST"])
 def display():
     if request.method == "POST":
         if review is None:
@@ -50,8 +50,8 @@ def display():
 
     # List all the books on the site
     # reviews = Review.query.all()
-    # books = Book.query.all()
-    return render_template("book.html", books=books)
+    books = Book.query.all()
+    return render_template("display.html", books=books)
 
 
 @app.route("/book", methods=["POST"])
