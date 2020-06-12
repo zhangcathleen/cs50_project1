@@ -20,6 +20,14 @@
           <li>Year Published: {{ info.year }}</li>
           <li>Average Rating: {{ info.average_rating }}</li>
           <li>Number of Reviews: {{ info.review_count}}</li>
+          <li>
+            Reviews:
+            <ul>
+              {% for review in info.review %}
+              <li>{{review.potato}} : {{review.note}}</li>
+              {% endfor %}
+            </ul>
+          </li>
         </ul>
       </div>
     </div>

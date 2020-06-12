@@ -25,7 +25,7 @@ class Review(db.Model):
     __tablename__ = "reviews"
     id = db.Column(db.Integer, primary_key=True)
     link = db.Column(db.String, db.ForeignKey("books.isbn"), nullable=False)
-    ratings_gr = db.Column(db.Float, nullable=False)
-    ratings_web = db.Column(db.Float)
-    potato = db.Column(db.Integer, db.ForeignKey("potatos.id"), nullable=False)
+    ratings = db.Column(db.Float)
+    potato = db.Column(db.Integer, db.ForeignKey("potatos.id"))
+    # nullable=False
     note = db.Column(db.String)
