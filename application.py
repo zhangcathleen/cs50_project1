@@ -51,11 +51,11 @@ def select_book(isbn):
     # return book_table
 
 
-def insert_review(isbn, note):
+def insert_review(isbn, note, rating):
     if db.execute("SELECT * FROM books WHERE isbn = :isbn", {"isbn": isbn}).rowcount == 0:
         return render_template("error.html", message="No book with this isbn on table insert_review", isbn=isbn)
-    db.execute("INSERT INTO reviews (isbn, note) VALUES (:isbn, :note)",
-               {"isbn": isbn, "note": note})
+    db.execute("INSERT INTO reviews (rating, isbn, note) VALUES (:rating, :isbn, :note)",
+               {"rating": int(rating), "isbn": isbn, "note": note})
     db.commit()
     return "success"
     # try:
@@ -136,18 +136,13 @@ def books(isbn):
 
     book_table = select_book(isbn)
     review_table = select_review(isbn)
-    # print(type(review_table))
-    # print(review_table)
 
     info = {}
-    # json = res.json()
     json_info = json['books'][0]
     info['isbn'] = isbn
     info['isbn13'] = json_info['isbn13']
     info['review_count'] = json_info['reviews_count']
     info['average_rating'] = json_info['average_rating']
-    # print(book_table)
-    # print(book_table.json())
     info['title'] = book_table[0][1]
     info['author'] = book_table[0][2]
     info['year'] = book_table[0][3]
@@ -156,11 +151,15 @@ def books(isbn):
     if review_table == 0:
         print("no reviews")
     else:
-        # print(review_table)
+        rating = 0
+        i = 0
         for line in review_table:
+            rating += line['rating']
+            i += 1
             usr = {'potato': line['potato'], 'note': line['note']}
             info['review'].append(usr)
             print(str(line['potato']) + " : " + str(line['note']))
+        info['rating'] = round(rating/i, 2)
 
     # print(info)
     return render_template("book.html", info=info)
@@ -170,18 +169,15 @@ def books(isbn):
 def form():
     isbn = request.form.get("isbn_review")
     rev = request.form.get('text_review')
+    rating = request.form.get('rating')
     book_table = db.execute(
         "SELECT * FROM books WHERE isbn = :isbn", {"isbn": isbn})
-    # print(SQLAlchemy.Table('books').columns.keys())
-    # print(book_table)
     if request.method == "POST":
         if book_table.rowcount == 0:
             return render_template("error.html", message="No book with this isbn form", isbn=isbn)
         else:
-            print(insert_review(isbn, rev))
+            print(insert_review(isbn, rev, rating))
             res = select_review(isbn)
-            # print('why')
-            # print(res)
             return redirect(url_for('submission', isbn=isbn))
     return render_template("form.html")
 

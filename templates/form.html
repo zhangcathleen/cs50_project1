@@ -1,5 +1,17 @@
 {% extends "layout.html" %} {% block title %} Potato Review Form {% endblock %}
-{% block body %}
+{% block stylesheet %}
+<style type="text/css">
+  input,
+  label {
+    display: block;
+  }
+
+  .ratings {
+    float: left;
+    margin-right: 20px;
+  }
+</style>
+{% endblock %} {% block body %}
 
 <div class="container">
   <div class="row">
@@ -17,8 +29,44 @@
 
         <br />
         <br />
-        <br />
 
+        <div>
+          <div class="ratings">
+            <label for="one">
+              One
+            </label>
+            <input type="radio" name="rating" value="1" />
+          </div>
+          <div class="ratings">
+            <label for="two">
+              Two
+            </label>
+            <input type="radio" name="rating" value="2" />
+          </div>
+          <div class="ratings">
+            <label for="three">
+              Three
+            </label>
+            <input type="radio" name="rating" value="3" />
+          </div>
+          <div class="ratings">
+            <label for="four">
+              Four
+            </label>
+            <input type="radio" name="rating" value="4" />
+          </div>
+          <div class="ratings">
+            <label for="five">
+              Five
+            </label>
+            <input type="radio" name="rating" value="5" />
+          </div>
+        </div>
+
+        <br />
+        <br />
+        <br />
+        <br />
         <label for="text_review">Review</label>
         <textarea
           name="text_review"
