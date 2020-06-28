@@ -1,0 +1,21 @@
+{% extends "layout.html" %} {% block title %} Results {% endblock %} {% block
+body %}
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col text-center">
+      <h2>Results from term "{{search}}"</h2>
+      <ul>
+        {% for book in books %}
+        <li>
+          {{ book.isbn }} :
+          <a href="{{ url_for('books', isbn=book.isbn) }}"
+            >{{ book.title }} by {{ book.author }}
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

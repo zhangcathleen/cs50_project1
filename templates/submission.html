@@ -6,7 +6,16 @@ body %}
       <h1>Success</h1>
       {{ isbn }}
       <br />
-      {{ message }} {{var}} {% endblock %}
+      {{ message }} {{var}} hi
+      <br />
+      <br />
+      <form
+        class="d-flex justify-content-center"
+        action="{{ url_for('display') }}"
+      >
+        <button>books</button>
+      </form>
+      {% endblock %}
     </div>
   </div>
 </div>

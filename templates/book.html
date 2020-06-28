@@ -24,9 +24,11 @@
           <li>
             Reviews:
             <ul>
-              {% for review in info.review %}
+              {% for review in info.review %} {% if review.rating %}
+              <li>{{review.potato}} : {{review.note}} : {{review.rating}}</li>
+              {% else %}
               <li>{{review.potato}} : {{review.note}}</li>
-              {% endfor %}
+              {% endif %} {% endfor %}
             </ul>
           </li>
         </ul>
