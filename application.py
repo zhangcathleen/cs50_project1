@@ -1,11 +1,13 @@
 import os
-from flask import Flask, session, render_template, jsonify, request, redirect, url_for
+from flask import Flask, session, render_template, jsonify, request, redirect, url_for, flash
 # from models import *
 from goodreads import *
 from flask_session import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.sql import text, select
+from functools import wraps
+
 
 from flask_sqlalchemy import SQLAlchemy
 
@@ -20,7 +22,6 @@ if not os.getenv("DATABASE_URL"):
     raise RuntimeError("DATABASE_URL is not set")
 
 # DEBUG = True
-wrongLogin = "Try Again - username or password does not match"
 db = SQLAlchemy()
 
 # Configure session to use filesystem
@@ -53,11 +54,27 @@ def select_book(isbn):
 
 # Inserts a rating and review into the book table
 def insert_review(isbn, note, rating):
+    # checking to make sure this book is in the database
     if db.execute("SELECT * FROM books WHERE isbn = :isbn", {"isbn": isbn}).rowcount == 0:
         return render_template("error.html", message="No book with this isbn on table insert_review", isbn=isbn)
-    db.execute("INSERT INTO reviews (rating, isbn, note) VALUES (:rating, :isbn, :note)",
-               {"rating": int(rating), "isbn": isbn, "note": note})
-    db.commit()
+
+    # potato = session['user']
+    # get id of this user to add into books table
+    potato = db.execute(
+        "SELECT id FROM potatos WHERE log = :potato", {"potato": session['user']}).fetchall()
+    potato_id = potato[0][0]
+    print(potato_id)
+    # TODO: make sure this user doesn't already have a review
+    if db.execute("SELECT * FROM reviews WHERE potato = :potato", {"potato": potato_id}).rowcount == 0:
+        print("insert")
+        db.execute("INSERT INTO reviews (rating, isbn, note, potato) VALUES (:rating, :isbn, :note, :potato_id)",
+                   {"rating": int(rating), "isbn": isbn, "note": note, "potato_id": int(potato_id)})
+        db.commit()
+    # if this user already has left a review - sorry, you can't
+    # TODO: let the user edit their review
+    else:
+        print("nope")
+        return False
     # return "success"
 
 
@@ -83,24 +100,24 @@ def goodreads_api(isbn):
 
 @app.route("/", methods=["POST", "GET"])
 def index():
+    wrongLogin = "Try Again - username or password does not match"
     if 'user' not in session:
         if request.method == "POST":
             username = request.form.get("username")
             password = request.form.get("password")
             potato_table = db.execute(
                 "SELECT * FROM potatos WHERE log = :log", {"log": username})
-            # print("posted")
+            # make sure the user exists
             if potato_table.rowcount == 1:
-                # print("selected user")
-                # print(potato_table.fetchall())
                 potato_pass = db.execute(
-                    "SELECT pass FROM potatos WHERE log = :log", {"log": username})
-                if potato_pass == password:
+                    "SELECT pass FROM potatos WHERE log = :log", {"log": username}).fetchall()
+                pot_pass = potato_pass[0][0]
+                # make sure that the password is correct
+                if pot_pass == password:
                     session['user'] = username
                     return "wohoo looged in <br> <a href=\"/logout\">Logout</a> <br> <a href=\"/main\">continue</a>"
                 else:
                     return render_template("index.html", message=wrongLogin)
-
             elif potato_table.rowcount > 1:
                 return "beep boop error - <a href=\"/\">try again</a>"
             else:
@@ -137,13 +154,33 @@ def register():
         return render_template("register.html")
 
 
+def login_required(function_to_protect):
+    @ wraps(function_to_protect)
+    def wrapper(*args, **kwargs):
+        user_id = session.get('user')
+        if user_id:
+            user = db.execute(
+                "SELECT * FROM potatos WHERE log = :log", {"log": user_id})
+            if user.rowcount == 1:
+                return function_to_protect(*args, **kwargs)
+            else:
+                flash("Session exists, but user doesn't exist anymore :(")
+                return redirect(url_for("index"))
+        else:
+            flash("Please log in!")
+            return redirect(url_for("index"))
+    return wrapper
+
+
 @ app.route("/main", methods=["GET", "POST"])
+@ login_required
 def main():
     return render_template("main.html")
 
 
 # List all the books on the site
 @ app.route("/display")
+@ login_required
 def display():
     books = db.execute("SELECT * FROM books").fetchall()
     return render_template("display.html", books=books)
@@ -151,6 +188,7 @@ def display():
 
 # Searches for the book with the corresponding isbn or title or author
 @ app.route("/book", methods=["POST"])
+@ login_required
 def book():
 
     search = request.form.get("search")
@@ -168,6 +206,7 @@ def book():
 
 # Dispaly the books that are a result of the search
 @ app.route("/results")
+@ login_required
 def results(vooks, search):
     if len(vooks) == 0:
         return render_template("results.html", message="There are no results with matching terms. \n Try again")
@@ -184,6 +223,7 @@ def results(vooks, search):
 
 # Returns the information for the given book with isbn
 @ app.route("/books/<isbn>")
+@ login_required
 def books(isbn):
 
     goodreads = goodreads_api(isbn)
@@ -222,6 +262,7 @@ def books(isbn):
 
 # Submits the review form
 @ app.route("/form", methods=["GET", "POST"])
+@ login_required
 def form():
     isbn = request.form.get("isbn_review")
     rev = request.form.get('text_review')
@@ -232,20 +273,24 @@ def form():
         if book_table.rowcount == 0:
             return render_template("error.html", message="No book with this isbn form", isbn=isbn)
         else:
-            insert_review(isbn, rev, rating)
-            res = select_review(isbn)
-            return redirect(url_for('submission', isbn=isbn))
+            if not insert_review(isbn, rev, rating):
+                return render_template("form.html", message="You've already left a review for this book")
+            else:
+                res = select_review(isbn)
+                return redirect(url_for('submission', isbn=isbn))
     return render_template("form.html")
 
 
 # Displays the success message after submitting a review
 @ app.route('/submission/<isbn>', methods=["GET"])
+@ login_required
 def submission(isbn):
     return render_template("submission.html", message="success!", var=isbn)
 
 
 # Returns a json about the book with the isbn
 @ app.route("/api/books/<isbn>")
+@ login_required
 def book_api(isbn):
     book_table = select_book(isbn)
     goodreads = goodreads_api(isbn)
