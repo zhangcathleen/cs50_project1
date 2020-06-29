@@ -53,7 +53,7 @@ def select_book(isbn):
 
 
 # Inserts a rating and review into the book table
-def insert_review(isbn, note, rating):
+def insert_review(isbn, note, rating, edit):
     # checking to make sure this book is in the database
     if db.execute("SELECT * FROM books WHERE isbn = :isbn", {"isbn": isbn}).rowcount == 0:
         return render_template("error.html", message="No book with this isbn on table insert_review", isbn=isbn)
@@ -63,17 +63,22 @@ def insert_review(isbn, note, rating):
     potato = db.execute(
         "SELECT id FROM potatos WHERE log = :potato", {"potato": session['user']}).fetchall()
     potato_id = potato[0][0]
-    print(potato_id)
-    # TODO: make sure this user doesn't already have a review
+    # print(potato_id)
+    # make sure this user doesn't already have a review
+    # or if it is currently editing
     if db.execute("SELECT * FROM reviews WHERE potato = :potato", {"potato": potato_id}).rowcount == 0:
         print("insert")
         db.execute("INSERT INTO reviews (rating, isbn, note, potato) VALUES (:rating, :isbn, :note, :potato_id)",
                    {"rating": int(rating), "isbn": isbn, "note": note, "potato_id": int(potato_id)})
         db.commit()
+    # let the user edit their review
+    elif edit:
+        db.execute("UPDATE reviews SET rating = :rating, note = :note WHERE potato = :potato_id",
+                   {"rating": int(rating), "note": note, "potato_id": int(potato_id)})
+        db.commit()
     # if this user already has left a review - sorry, you can't
-    # TODO: let the user edit their review
     else:
-        print("nope")
+        # print("nope")
         return False
     # return "success"
 
@@ -247,14 +252,22 @@ def books(isbn):
         rating = 0
         i = 0
         for line in review_table:
+            # get the name of the user id
+            potato_id = db.execute("SELECT log FROM potatos WHERE id = :id", {
+                                   "id": line['potato']}).fetchall()
+            if not potato_id:
+                potato = None
+            else:
+                potato = potato_id[0][0]
+
             if line['rating']:
                 rating = rating + int(line['rating'])
                 i = 1+i
-                usr = {'potato': line['potato'],
+                usr = {'potato': potato,
                        'note': line['note'], 'rating': line['rating']}
             else:
                 rating = rating
-                usr = {'potato': line['potato'], 'note': line['note']}
+                usr = {'potato': potato, 'note': line['note']}
             info['review'].append(usr)
         info['rating'] = round(rating/i, 2)
     return render_template("book.html", info=info)
@@ -273,12 +286,61 @@ def form():
         if book_table.rowcount == 0:
             return render_template("error.html", message="No book with this isbn form", isbn=isbn)
         else:
-            if not insert_review(isbn, rev, rating):
-                return render_template("form.html", message="You've already left a review for this book")
+            # returns false if there's already this book
+            if not insert_review(isbn, rev, rating, False):
+                return redirect(url_for('edit', isbn=isbn))
             else:
                 res = select_review(isbn)
                 return redirect(url_for('submission', isbn=isbn))
     return render_template("form.html")
+
+
+# Edits a review
+@ app.route("/edit/<isbn>", methods=["GET", "POST"])
+@ login_required
+def edit(isbn):
+    first, second, third, fourth, fifth = "", "", "", "", ""
+    # get the name of the book from the isbn
+    book = db.execute(
+        "SELECT title FROM books WHERE isbn = :isbn", {"isbn": isbn}).fetchall()
+    title = book[0][0]
+
+    # get the user id
+    user = db.execute("SELECT id FROM potatos WHERE log = :log", {
+        "log": session['user']}).fetchall()
+    user_id = user[0][0]
+    # get the review + ratings of the book from the isbn
+    reviews = db.execute(
+        "SELECT rating, note FROM reviews WHERE isbn = :isbn AND potato = :potato",
+        {"isbn": isbn, "potato": user_id}).fetchall()
+    rating = reviews[0][0]
+    rev = reviews[0][1]
+    print(type(rating))
+    if rating == 1.0:
+        first = "checked"
+    elif rating == 2.0:
+        second = "checked"
+    elif rating == 3.0:
+        third = "checked"
+    elif rating == 4.0:
+        fourth = "checked"
+    elif rating == 5.0:
+        fifth = "checked"
+    else:
+        first = ""
+
+    book_table = db.execute(
+        "SELECT * FROM books WHERE isbn = :isbn", {"isbn": isbn})
+    if request.method == "POST":
+        rev = request.form.get('text_review')
+        rating = request.form.get('rating')
+        if book_table.rowcount == 0:
+            return render_template("error.html", message="No book with this isbn form", isbn=isbn)
+        else:
+            insert_review(isbn, rev, rating, True)
+            res = select_review(isbn)
+            return redirect(url_for('submission', isbn=isbn))
+    return render_template("edit.html", title=title, isbn=isbn, rating=rating, rev=rev, first=first, second=second, third=third, fourth=fourth, fifth=fifth)
 
 
 # Displays the success message after submitting a review

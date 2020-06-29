@@ -1,0 +1,93 @@
+{% extends "layout.html" %} {% block title %} Potato Edit Review {% endblock %}
+{% block stylesheet %}
+<style type="text/css">
+  input,
+  label {
+    display: block;
+  }
+
+  .ratings {
+    float: left;
+    margin-right: 20px;
+  }
+</style>
+{% endblock %} {% block body %}
+
+<div class="container">
+  <div class="row">
+    <div class="col text-center">
+      <h1>Potato Edit Review</h1>
+      <br />
+      You've already left a review for {{ title }}
+      <br />
+      Edit your review instead!
+      <br />
+    </div>
+  </div>
+
+  <form class="d-flex justify-content-center form-group" method="POST">
+    <div class="row">
+      <div class="col text-center">
+        <input
+          name="isbn_review"
+          placeholder="ISBN NUMBER"
+          value="{{ isbn }}"
+        />
+
+        <br />
+        <br />
+
+        <div>
+          <div class="ratings">
+            <label for="one">
+              One
+            </label>
+            <input type="radio" name="rating" value="1" {{ first }} />
+          </div>
+          <div class="ratings">
+            <label for="two">
+              Two
+            </label>
+            <input type="radio" name="rating" value="2" {{ second }} />
+          </div>
+          <div class="ratings">
+            <label for="three">
+              Three
+            </label>
+            <input type="radio" name="rating" value="3" {{ third }} />
+          </div>
+          <div class="ratings">
+            <label for="four">
+              Four
+            </label>
+            <input type="radio" name="rating" value="4" {{ fourth }} />
+          </div>
+          <div class="ratings">
+            <label for="five">
+              Five
+            </label>
+            <input type="radio" name="rating" value="5" {{ fifth }} />
+          </div>
+        </div>
+
+        <br />
+        <br />
+        <br />
+        <br />
+        <label for="text_review">Review</label>
+        <textarea
+          name="text_review"
+          id="text_form_review"
+          class="form-control"
+          rows="5"
+        >
+          {{ rev }}
+        </textarea>
+        <br />
+        <button>submit review</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+{% endblock %}
