@@ -42,6 +42,38 @@ engine = create_engine(os.getenv("DATABASE_URL"))
 db = scoped_session(sessionmaker(bind=engine))
 
 
+# Checks if the user has already reviewed this book
+# True = yes
+# False = no
+# NUM => BOOL
+def user_reviewed(isbn):
+    potato = db.execute(
+        "SELECT id FROM potatos WHERE log = :potato", {"potato": session['user']}).fetchall()
+    potato_id = potato[0][0]
+    reviews = db.execute(
+        "SELECT * FROM reviews WHERE potato = :potato AND isbn = :isbn", {"potato": potato_id, "isbn": isbn})
+    # not - has not reviewed the book = has reviewed the book
+    return not reviews.rowcount == 0
+
+
+# Check if the book is in the books table + unique
+# true = yes
+# false = no
+# Should only be True or False bc isbn is unique
+# NUM => BOOL
+def book_in(isbn):
+    return db.execute("SELECT * FROM books WHERE isbn = :isbn", {"isbn": isbn}).rowcount == 1
+
+
+# Gets the title of a book based on the isbn
+# NUM => STR
+def book_title(isbn):
+    book = db.execute(
+        "SELECT title FROM books WHERE isbn = :isbn", {"isbn": isbn}).fetchall()
+    title = book[0][0]
+    return title
+
+
 # Returns the selected book information from the book table
 def select_book(isbn):
     book_table = db.execute(
@@ -53,34 +85,31 @@ def select_book(isbn):
 
 
 # Inserts a rating and review into the book table
-def insert_review(isbn, note, rating, edit):
+def insert_review(isbn, note, rating):
     # checking to make sure this book is in the database
-    if db.execute("SELECT * FROM books WHERE isbn = :isbn", {"isbn": isbn}).rowcount == 0:
+    if not book_in(isbn):
         return render_template("error.html", message="No book with this isbn on table insert_review", isbn=isbn)
 
-    # potato = session['user']
-    # get id of this user to add into books table
-    potato = db.execute(
-        "SELECT id FROM potatos WHERE log = :potato", {"potato": session['user']}).fetchall()
-    potato_id = potato[0][0]
-    # print(potato_id)
     # make sure this user doesn't already have a review
-    # or if it is currently editing
-    if db.execute("SELECT * FROM reviews WHERE potato = :potato", {"potato": potato_id}).rowcount == 0:
+    if user_reviewed(isbn) == 0:
         print("insert")
         db.execute("INSERT INTO reviews (rating, isbn, note, potato) VALUES (:rating, :isbn, :note, :potato_id)",
                    {"rating": int(rating), "isbn": isbn, "note": note, "potato_id": int(potato_id)})
         db.commit()
-    # let the user edit their review
-    elif edit:
+
+
+# Edits the selected review and updates the review table
+def edit_review(isbn, note, rating):
+    # checking to make sure this book is in the database
+    if not book_in(isbn):
+        return render_template("error.html", message="No book with this isbn on table insert_review", isbn=isbn)
+
+    # make sure this user already has a review
+    if user_reviewed(isbn) == 1:
+        print("edit")
         db.execute("UPDATE reviews SET rating = :rating, note = :note WHERE potato = :potato_id",
                    {"rating": int(rating), "note": note, "potato_id": int(potato_id)})
         db.commit()
-    # if this user already has left a review - sorry, you can't
-    else:
-        # print("nope")
-        return False
-    # return "success"
 
 
 # Selects the reviews for the corresponding isbn book
@@ -106,13 +135,14 @@ def goodreads_api(isbn):
 @app.route("/", methods=["POST", "GET"])
 def index():
     wrongLogin = "Try Again - username or password does not match"
-    if 'user' not in session:
-        if request.method == "POST":
+    if request.method == "POST":
+        # not logged in yet
+        if 'user' not in session:
             username = request.form.get("username")
             password = request.form.get("password")
             potato_table = db.execute(
                 "SELECT * FROM potatos WHERE log = :log", {"log": username})
-            # make sure the user exists
+            # make sure the user exists + is unique
             if potato_table.rowcount == 1:
                 potato_pass = db.execute(
                     "SELECT pass FROM potatos WHERE log = :log", {"log": username}).fetchall()
@@ -127,8 +157,9 @@ def index():
                 return "beep boop error - <a href=\"/\">try again</a>"
             else:
                 return render_template("index.html", message=wrongLogin)
+        # already logged in
         else:
-            return render_template("index.html")
+            return redirect(url_for("main.html"))
     else:
         return render_template("index.html")
 
@@ -142,6 +173,7 @@ def logout():
 
 @ app.route("/register", methods=["GET", "POST"])
 def register():
+    exists = "This user already exists"
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
@@ -151,12 +183,13 @@ def register():
             "SELECT * FROM potatos WHERE log = :log", {"log": username})
         if name.rowcount > 0:
             return render_template("register.html", message="Sorry, this user already exists")
-        db.execute("INSERT INTO potatos (log, pass) VALUES (:username, :password)", {
-                   "username": username, "password": password})
-        db.commit()
-        return "registered account! <a href=\"/\">login</a>"
+        elif name.rowcount == 0:
+            db.execute("INSERT INTO potatos (log, pass) VALUES (:username, :password)", {
+                "username": username, "password": password})
+            db.commit()
+            return "registered account! <a href=\"/\">login</a>"
     else:
-        return render_template("register.html")
+        return render_template("register.html", message=exists)
 
 
 def login_required(function_to_protect):
@@ -195,21 +228,23 @@ def display():
 @ app.route("/book", methods=["POST"])
 @ login_required
 def book():
-
+    # Get the search term
     search = request.form.get("search")
-    if db.execute("SELECT * FROM reviews WHERE isbn = :search", {"search": search}).rowcount != 0:
-        # isbn = search
+    # If the search term is the isbn
+    if db.execute("SELECT * FROM reviews WHERE isbn = :search", {"search": search}).rowcount == 1:
         return books(search)
-    elif db.execute("SELECT isbn FROM books WHERE (title LIKE :search) OR (author LIKE :search);", {"search": f'%{search}%'}) != 0:
-        result = db.execute("SELECT * FROM books WHERE (title LIKE :search) OR (author LIKE :search);", {
-            "search": f'%{search}%'}).fetchall()
+    # If the search term is author or title:
+    # Redirects to result page
+    else:
+        result = db.execute("SELECT * FROM books WHERE (title LIKE :search) OR (author LIKE :search);",
+                            {"search": f'%{search}%'}).fetchall()
         vooks = []
         for line in result:
             vooks.append(line["isbn"])
         return results(vooks, search)
 
 
-# Dispaly the books that are a result of the search
+# Display the books that are a result of the search
 @ app.route("/results")
 @ login_required
 def results(vooks, search):
@@ -221,15 +256,41 @@ def results(vooks, search):
             book = db.execute(
                 "SELECT * FROM books WHERE isbn = :v", {"v": v}).fetchall()
             books = books + book
-            # print(book)
-        # print(books)
         return render_template("results.html", books=books, search=search)
 
 
 # Returns the information for the given book with isbn
-@ app.route("/books/<isbn>")
+@ app.route("/books/<isbn>", methods=["POST", "GET"])
 @ login_required
 def books(isbn):
+
+    # Edit previous review or leave a new review
+    # Based on if they already did it
+    review = ""
+    button = ""
+
+    # get id of this user to add into books table
+    potato = db.execute(
+        "SELECT id FROM potatos WHERE log = :potato", {"potato": session['user']}).fetchall()
+    potato_id = potato[0][0]
+    potato_review = db.execute(
+        "SELECT * FROM reviews WHERE potato = :potato AND isbn = :isbn", {"potato": potato_id, "isbn": isbn}).rowcount
+
+    # check if the book is in the database
+    if book_in(isbn):
+        # did the user review this book yet
+        if not user_reviewed(isbn):
+            review = "Leave a review for this book"
+            button = "Review"
+            if request.method == "POST":
+                return form(isbn)
+        else:
+            review = "Edit your review"
+            button = "Edit"
+            if request.method == "POST":
+                return redirect(url_for("edit", isbn=isbn))
+    else:
+        return render_template("error.html", message="Sorry! This book is not in the database yet")
 
     goodreads = goodreads_api(isbn)
     book_table = select_book(isbn)
@@ -270,52 +331,66 @@ def books(isbn):
                 usr = {'potato': potato, 'note': line['note']}
             info['review'].append(usr)
         info['rating'] = round(rating/i, 2)
-    return render_template("book.html", info=info)
+    return render_template("book.html", info=info, review=review)
 
 
 # Submits the review form
 @ app.route("/form", methods=["GET", "POST"])
 @ login_required
-def form():
-    isbn = request.form.get("isbn_review")
-    rev = request.form.get('text_review')
-    rating = request.form.get('rating')
-    book_table = db.execute(
-        "SELECT * FROM books WHERE isbn = :isbn", {"isbn": isbn})
-    if request.method == "POST":
-        if book_table.rowcount == 0:
-            return render_template("error.html", message="No book with this isbn form", isbn=isbn)
-        else:
-            # returns false if there's already this book
-            if not insert_review(isbn, rev, rating, False):
-                return redirect(url_for('edit', isbn=isbn))
+def form(*args):
+    info = ""
+    user = session["user"]
+
+    # If the user submitted the form on the page
+    if request.method == "POST" and len(args) == 0:
+        isbn = request.form.get("isbn_review")
+        rating = request.form.get('rating')
+        rev = request.form.get('text_review')
+
+        # If the book is in the database
+        if book_in(isbn):
+            # if the user has already reviewed this book -> edit
+            if user_reviewed(isbn):
+                return redirect(url_for('edit', isbn, rating, rev))
+            # if the user has not reviewed the book yet + has submitted it
             else:
-                res = select_review(isbn)
-                return redirect(url_for('submission', isbn=isbn))
-    return render_template("form.html")
+                return redirect(url_for('submission', isbn=isbn, info_isbn=info))
+        # the book is not in the database
+        else:
+            return render_template("error.html", message="No book with this isbn form", isbn=isbn)
+    # Reviewing from the selected book page
+    elif request.method == "POST" and len(args) == 1:
+        title = book_title(args[0])
+        message = "Reviewing " + title + "\n"
+        return render_template("form.html", isbn=args[0], message=message)
+    # Just loads the basic webpage
+    else:
+        return render_template("form.html")
 
 
 # Edits a review
 @ app.route("/edit/<isbn>", methods=["GET", "POST"])
 @ login_required
-def edit(isbn):
+def edit(*args):
     first, second, third, fourth, fifth = "", "", "", "", ""
-    # get the name of the book from the isbn
-    book = db.execute(
-        "SELECT title FROM books WHERE isbn = :isbn", {"isbn": isbn}).fetchall()
-    title = book[0][0]
+
+    isbn = args[0]
+    book_title(isbn)
 
     # get the user id
     user = db.execute("SELECT id FROM potatos WHERE log = :log", {
         "log": session['user']}).fetchall()
     user_id = user[0][0]
+
     # get the review + ratings of the book from the isbn
     reviews = db.execute(
         "SELECT rating, note FROM reviews WHERE isbn = :isbn AND potato = :potato",
         {"isbn": isbn, "potato": user_id}).fetchall()
-    rating = reviews[0][0]
+
+    print(reviews)
     rev = reviews[0][1]
-    print(type(rating))
+
+    rating = reviews[0][0]
     if rating == 1.0:
         first = "checked"
     elif rating == 2.0:
@@ -329,18 +404,16 @@ def edit(isbn):
     else:
         first = ""
 
-    book_table = db.execute(
-        "SELECT * FROM books WHERE isbn = :isbn", {"isbn": isbn})
     if request.method == "POST":
         rev = request.form.get('text_review')
         rating = request.form.get('rating')
-        if book_table.rowcount == 0:
+        if not book_in:
             return render_template("error.html", message="No book with this isbn form", isbn=isbn)
         else:
-            insert_review(isbn, rev, rating, True)
-            res = select_review(isbn)
+            insert_review(isbn, rev, rating)
             return redirect(url_for('submission', isbn=isbn))
-    return render_template("edit.html", title=title, isbn=isbn, rating=rating, rev=rev, first=first, second=second, third=third, fourth=fourth, fifth=fifth)
+    else:
+        return render_template("edit.html", title=title, isbn=isbn, rating=rating, rev=rev, first=first, second=second, third=third, fourth=fourth, fifth=fifth)
 
 
 # Displays the success message after submitting a review

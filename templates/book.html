@@ -13,6 +13,7 @@
     <div class="col text-center">
       <div>
         <h2>Book Info</h2>
+        <br />
         <ul>
           <li>Book Title: {{ info.title }}</li>
           <li>ISBN Number: {{ info.isbn }}</li>
@@ -32,6 +33,11 @@
             </ul>
           </li>
         </ul>
+        {{ review }}
+
+        <form>
+          <button type="submit" formmethod="POST">{{ button }}</button>
+        </form>
       </div>
     </div>
   </div>

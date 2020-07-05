@@ -20,13 +20,18 @@
       <br />
       {{ message }}
       <br />
+      <br />
     </div>
   </div>
 
   <form class="d-flex justify-content-center form-group" method="POST">
     <div class="row">
       <div class="col text-center">
-        <input name="isbn_review" placeholder="ISBN Number" />
+        <input
+          name="isbn_review"
+          placeholder="ISBN Number"
+          value="{{ isbn }}"
+        />
 
         <br />
         <br />
