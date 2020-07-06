@@ -192,6 +192,7 @@ def register():
         return render_template("register.html", message=exists)
 
 
+# Requires the user to log in in order to use the review site
 def login_required(function_to_protect):
     @ wraps(function_to_protect)
     def wrapper(*args, **kwargs):
@@ -278,15 +279,19 @@ def books(isbn):
 
     # check if the book is in the database
     if book_in(isbn):
+        print("books " + isbn)
         # did the user review this book yet
         if not user_reviewed(isbn):
             review = "Leave a review for this book"
             button = "Review"
+            print("books " + review)
             if request.method == "POST":
-                return form(isbn)
+                # return form(isbn) TODO: Maybe?
+                return redirect(url_for("form"))
         else:
             review = "Edit your review"
             button = "Edit"
+            print("books " + review)
             if request.method == "POST":
                 return redirect(url_for("edit", isbn=isbn))
     else:
@@ -334,48 +339,67 @@ def books(isbn):
     return render_template("book.html", info=info, review=review)
 
 
+# TODO: Work on submitting review form from books results or new form
 # Submits the review form
 @ app.route("/form", methods=["GET", "POST"])
 @ login_required
 def form(*args):
     info = ""
+    if len(args) == 1:
+        info = args[0]
     user = session["user"]
+    # print("form")
+    # print(args)
 
+    # Maybe in the future - from the results page
+    # # Reviewing from the selected book page
+    # if len(args) == 1:
+    #     print("form reached len(args) == 1")
+    #     title = book_title(args[0])
+    #     message = "Reviewing " + title + "\n"
+    #     render_template("form.html", isbn=args[0], message=message)
+    #     return redirect(form(args[0]))
     # If the user submitted the form on the page
-    if request.method == "POST" and len(args) == 0:
+    if request.method == "POST":
         isbn = request.form.get("isbn_review")
         rating = request.form.get('rating')
         rev = request.form.get('text_review')
-
+        print("form")
+        print(isbn)
         # If the book is in the database
         if book_in(isbn):
             # if the user has already reviewed this book -> edit
             if user_reviewed(isbn):
-                return redirect(url_for('edit', isbn, rating, rev))
+                return redirect(url_for('edit', isbn=isbn))
             # if the user has not reviewed the book yet + has submitted it
             else:
-                return redirect(url_for('submission', isbn=isbn, info_isbn=info))
+                insert_review(isbn, rev, rating)
+                return redirect(url_for('submission', isbn=isbn))
         # the book is not in the database
         else:
-            return render_template("error.html", message="No book with this isbn form", isbn=isbn)
-    # Reviewing from the selected book page
-    elif request.method == "POST" and len(args) == 1:
-        title = book_title(args[0])
-        message = "Reviewing " + title + "\n"
-        return render_template("form.html", isbn=args[0], message=message)
+            return render_template("error.html", message="No book with this isbn number", isbn=isbn)
     # Just loads the basic webpage
     else:
-        return render_template("form.html")
+        return render_template("form.html", message=info)
 
 
 # Edits a review
 @ app.route("/edit/<isbn>", methods=["GET", "POST"])
 @ login_required
-def edit(*args):
+def edit(isbn):
+
+    if not book_in(isbn):
+        return render_template("error.html", message="No book with this isbn number", isbn=isbn)
+
+    if not user_reviewed(isbn):
+        # TODO: How to do the display the message in the form instead of the url
+        return redirect(url_for("form", message="You haven't reviewed this book yet", isbn=isbn))
+
     first, second, third, fourth, fifth = "", "", "", "", ""
 
-    isbn = args[0]
-    book_title(isbn)
+    # TODO: From form
+    # isbn = args[0]
+    title = book_title(isbn)
 
     # get the user id
     user = db.execute("SELECT id FROM potatos WHERE log = :log", {
@@ -387,7 +411,7 @@ def edit(*args):
         "SELECT rating, note FROM reviews WHERE isbn = :isbn AND potato = :potato",
         {"isbn": isbn, "potato": user_id}).fetchall()
 
-    print(reviews)
+    # print(reviews)
     rev = reviews[0][1]
 
     rating = reviews[0][0]
@@ -407,11 +431,8 @@ def edit(*args):
     if request.method == "POST":
         rev = request.form.get('text_review')
         rating = request.form.get('rating')
-        if not book_in:
-            return render_template("error.html", message="No book with this isbn form", isbn=isbn)
-        else:
-            insert_review(isbn, rev, rating)
-            return redirect(url_for('submission', isbn=isbn))
+        edit_review(isbn, rev, rating)
+        return redirect(url_for('submission', isbn=isbn))
     else:
         return render_template("edit.html", title=title, isbn=isbn, rating=rating, rev=rev, first=first, second=second, third=third, fourth=fourth, fifth=fifth)
 
