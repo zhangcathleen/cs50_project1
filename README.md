@@ -6,7 +6,7 @@ Creating a website to rate and review books using the GoodRead API, PostGreSQL, 
 
 Hello!
 
-I hope yall are having a fabulous day. This is my version of Project 1 - Web Programming with Python and Javascript.
+I hope yall are having a fabulous day. This is my version of Project 1 - Web Programming with Python and Javascript: Potato Book Reviews
 
 1. Index Page
    index()
@@ -45,7 +45,19 @@ I hope yall are having a fabulous day. This is my version of Project 1 - Web Pro
 
 5. Book Information Page
    books(isbn)
-   Lists all of the information for a specific book
+   Lists all of the information for a specific book:
+
+   - Title
+   - Author
+   - Published Date
+   - Goodreads Rating
+   - Number of Rating on Goodreads
+   - Average Rating on Potato Books
+   - Reviews by user on Potato Books
+     - Name
+     - Rating
+     - Review
+   - Button to review book
 
 6. Book Review Page
    form(\*args)
@@ -67,7 +79,7 @@ I hope yall are having a fabulous day. This is my version of Project 1 - Web Pro
 
    Check if the book has been reviewed or not:
 
-   - If not - redirets to a form
+   - If not - redirects to a form
      **Needs to be able to display the message in the form instead of the url**
      Checks if the book is in the database:
 
@@ -81,9 +93,14 @@ I hope yall are having a fabulous day. This is my version of Project 1 - Web Pro
 
 9. API Page
    Returns a json with information on this book:
+
    - title
    - author
    - year published
    - isbn
    - the number of reviews
    - the average rating
+
+10. Logout Page
+    You need type /logout
+    **This is currently how it works because I haven't designed it in**

@@ -6,7 +6,11 @@ block body %}
     <div class="col text-center">
       <h1>Register Account</h1>
       <br />
-      {{ message }}
+      <ul style="list-style: none;">
+        {% for line in message %}
+        <li>{{ line }}</li>
+        {% endfor %}
+      </ul>
       <br />
       <form method="POST">
         <input name="username" placeholder="username" />
@@ -15,6 +19,13 @@ block body %}
         <br />
         <br />
         <button>register</button>
+      </form>
+      <br />
+      <form
+        class="d-flex justify-content-center"
+        action="{{ url_for('index') }}"
+      >
+        <button>log in</button>
       </form>
     </div>
   </div>

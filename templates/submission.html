@@ -4,9 +4,8 @@ body %}
   <div class="row">
     <div class="col text-center">
       <h1>Success</h1>
-      {{ isbn }}
       <br />
-      {{ message }} {{var}} hi
+      {{ message }} {{var}}
       <br />
       <br />
       <form
@@ -14,6 +13,15 @@ body %}
         action="{{ url_for('display') }}"
       >
         <button>books</button>
+      </form>
+
+      <br />
+
+      <form
+        class="d-flex justify-content-center"
+        action="{{ url_for('books', isbn=var) }}"
+      >
+        <button>"{{ book }}" Information</button>
       </form>
       {% endblock %}
     </div>

@@ -14,7 +14,7 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import timedelta
 
 # export FLASK_APP=application.py
-# export DATABASE_URL = postgres://xhwfyyyajrayzc:98be0231bd360be4522c1e5afcec40a58d1ab3999c9f9457a9e1d21d182edd55@ec2-34-232-147-86.compute-1.amazonaws.com: 5432/db51ts8th98q5a
+# export DATABASE_URL=postgres://xhwfyyyajrayzc:98be0231bd360be4522c1e5afcec40a58d1ab3999c9f9457a9e1d21d182edd55@ec2-34-232-147-86.compute-1.amazonaws.com:5432/db51ts8th98q5a
 # export FLASK_DEBUG=1
 
 # Check for environment variable
@@ -41,15 +41,22 @@ Session(app)
 engine = create_engine(os.getenv("DATABASE_URL"))
 db = scoped_session(sessionmaker(bind=engine))
 
+registered = False
+
+
+# Get the user's id
+def get_potato():
+    potato = db.execute(
+        "SELECT id FROM potatos WHERE log = :potato", {"potato": session['user']}).fetchall()
+    return potato[0][0]
+
 
 # Checks if the user has already reviewed this book
 # True = yes
 # False = no
 # NUM => BOOL
 def user_reviewed(isbn):
-    potato = db.execute(
-        "SELECT id FROM potatos WHERE log = :potato", {"potato": session['user']}).fetchall()
-    potato_id = potato[0][0]
+    potato_id = get_potato()
     reviews = db.execute(
         "SELECT * FROM reviews WHERE potato = :potato AND isbn = :isbn", {"potato": potato_id, "isbn": isbn})
     # not - has not reviewed the book = has reviewed the book
@@ -86,13 +93,14 @@ def select_book(isbn):
 
 # Inserts a rating and review into the book table
 def insert_review(isbn, note, rating):
+    potato_id = get_potato()
+
     # checking to make sure this book is in the database
     if not book_in(isbn):
         return render_template("error.html", message="No book with this isbn on table insert_review", isbn=isbn)
 
     # make sure this user doesn't already have a review
     if user_reviewed(isbn) == 0:
-        print("insert")
         db.execute("INSERT INTO reviews (rating, isbn, note, potato) VALUES (:rating, :isbn, :note, :potato_id)",
                    {"rating": int(rating), "isbn": isbn, "note": note, "potato_id": int(potato_id)})
         db.commit()
@@ -100,6 +108,8 @@ def insert_review(isbn, note, rating):
 
 # Edits the selected review and updates the review table
 def edit_review(isbn, note, rating):
+    potato_id = get_potato()
+
     # checking to make sure this book is in the database
     if not book_in(isbn):
         return render_template("error.html", message="No book with this isbn on table insert_review", isbn=isbn)
@@ -134,7 +144,10 @@ def goodreads_api(isbn):
 
 @app.route("/", methods=["POST", "GET"])
 def index():
-    wrongLogin = "Try Again - username or password does not match"
+    wrong_login = "Try Again - username or password does not match"
+    no_user = [0]
+    no_user.append("It doesn't seem like you have an account.")
+    no_user.append("Why not register for one?")
     if request.method == "POST":
         # not logged in yet
         if 'user' not in session:
@@ -152,14 +165,17 @@ def index():
                     session['user'] = username
                     return "wohoo looged in <br> <a href=\"/logout\">Logout</a> <br> <a href=\"/main\">continue</a>"
                 else:
-                    return render_template("index.html", message=wrongLogin)
+                    return render_template("index.html", message=wrong_login)
             elif potato_table.rowcount > 1:
                 return "beep boop error - <a href=\"/\">try again</a>"
             else:
-                return render_template("index.html", message=wrongLogin)
+                global registered
+                registered = False
+                return register(no_user)
+
         # already logged in
         else:
-            return redirect(url_for("main.html"))
+            return redirect(url_for("main"))
     else:
         return render_template("index.html")
 
@@ -172,9 +188,19 @@ def logout():
 
 
 @ app.route("/register", methods=["GET", "POST"])
-def register():
-    exists = "This user already exists"
-    if request.method == "POST":
+def register(*args):
+    global registered
+
+    # get the message from login/index - the user does not exist
+    if len(args) == 1:
+        exists = args[0][1:3]
+    else:
+        exists = "This user already exists"
+
+    print(args)
+    print(request.method)
+    print(registered)
+    if request.method == "POST" and registered:
         username = request.form.get("username")
         password = request.form.get("password")
 
@@ -188,7 +214,10 @@ def register():
                 "username": username, "password": password})
             db.commit()
             return "registered account! <a href=\"/\">login</a>"
+        else:
+            return render_template("register.html", message=exists)
     else:
+        registered = True
         return render_template("register.html", message=exists)
 
 
@@ -271,9 +300,7 @@ def books(isbn):
     button = ""
 
     # get id of this user to add into books table
-    potato = db.execute(
-        "SELECT id FROM potatos WHERE log = :potato", {"potato": session['user']}).fetchall()
-    potato_id = potato[0][0]
+    potato_id = get_potato()
     potato_review = db.execute(
         "SELECT * FROM reviews WHERE potato = :potato AND isbn = :isbn", {"potato": potato_id, "isbn": isbn}).rowcount
 
@@ -320,7 +347,7 @@ def books(isbn):
         for line in review_table:
             # get the name of the user id
             potato_id = db.execute("SELECT log FROM potatos WHERE id = :id", {
-                                   "id": line['potato']}).fetchall()
+                "id": line['potato']}).fetchall()
             if not potato_id:
                 potato = None
             else:
@@ -364,8 +391,6 @@ def form(*args):
         isbn = request.form.get("isbn_review")
         rating = request.form.get('rating')
         rev = request.form.get('text_review')
-        print("form")
-        print(isbn)
         # If the book is in the database
         if book_in(isbn):
             # if the user has already reviewed this book -> edit
@@ -441,7 +466,10 @@ def edit(isbn):
 @ app.route('/submission/<isbn>', methods=["GET"])
 @ login_required
 def submission(isbn):
-    return render_template("submission.html", message="success!", var=isbn)
+    book_table = select_book(isbn)
+    book = book_table[0][1]
+
+    return render_template("submission.html", message="success!", var=isbn, book=book)
 
 
 # Returns a json about the book with the isbn
